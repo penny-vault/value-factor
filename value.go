@@ -27,7 +27,6 @@ import (
 	"github.com/penny-vault/pvbt/data"
 	"github.com/penny-vault/pvbt/engine"
 	"github.com/penny-vault/pvbt/portfolio"
-	"github.com/penny-vault/pvbt/tradecron"
 )
 
 //go:embed README.md
@@ -44,16 +43,7 @@ func (s *ValueFactor) Name() string {
 	return "Value Factor"
 }
 
-func (s *ValueFactor) Setup(eng *engine.Engine) {
-	// Quarterly rebalancing to align with earnings release cycles.
-	tc, err := tradecron.New("@quarterend", tradecron.MarketHours{Open: 930, Close: 1600})
-	if err != nil {
-		panic(err)
-	}
-
-	eng.Schedule(tc)
-	eng.SetBenchmark(eng.Asset("VFINX"))
-}
+func (s *ValueFactor) Setup(_ *engine.Engine) {}
 
 func (s *ValueFactor) Describe() engine.StrategyDescription {
 	return engine.StrategyDescription{
@@ -62,10 +52,12 @@ func (s *ValueFactor) Describe() engine.StrategyDescription {
 		Source:      "https://doi.org/10.1111/j.1540-6261.1992.tb04398.x",
 		Version:     "1.0.0",
 		VersionDate: time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC),
+		Schedule:    "@quarterend",
+		Benchmark:   "VFINX",
 	}
 }
 
-func (s *ValueFactor) Compute(ctx context.Context, eng *engine.Engine, strategyPortfolio portfolio.Portfolio) error {
+func (s *ValueFactor) Compute(ctx context.Context, eng *engine.Engine, strategyPortfolio portfolio.Portfolio, batch *portfolio.Batch) error {
 	// 1. Get the index universe for the current date.
 	indexUniverse := eng.IndexUniverse(s.IndexName)
 
@@ -123,11 +115,10 @@ func (s *ValueFactor) Compute(ctx context.Context, eng *engine.Engine, strategyP
 		members[sv.stock] = weight
 	}
 
-	ts := eng.CurrentDate().Unix()
 	justification := fmt.Sprintf("top %d/%d cheapest by EV/EBIT from %s", topCount, len(candidates), s.IndexName)
 
-	strategyPortfolio.Annotate(ts, "universe-size", fmt.Sprintf("%d", len(candidates)))
-	strategyPortfolio.Annotate(ts, "justification", justification)
+	batch.Annotate("universe-size", fmt.Sprintf("%d", len(candidates)))
+	batch.Annotate("justification", justification)
 
 	allocation := portfolio.Allocation{
 		Date:          eng.CurrentDate(),
@@ -135,7 +126,7 @@ func (s *ValueFactor) Compute(ctx context.Context, eng *engine.Engine, strategyP
 		Justification: justification,
 	}
 
-	if err := strategyPortfolio.RebalanceTo(ctx, allocation); err != nil {
+	if err := batch.RebalanceTo(ctx, allocation); err != nil {
 		return fmt.Errorf("rebalance failed: %w", err)
 	}
 
