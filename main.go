@@ -15,8 +15,11 @@
 
 package main
 
-import "github.com/penny-vault/pvbt/cli"
+import (
+	"github.com/penny-vault/pvbt/cli"
+	"github.com/penny-vault/value-factor/value"
+)
 
 func main() {
-	cli.Run(&ValueFactor{})
+	cli.Run(&value.ValueFactor{})
 }
