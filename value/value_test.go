@@ -43,7 +43,7 @@ var _ = Describe("ValueFactor", func() {
 	})
 
 	runBacktest := func() portfolio.Portfolio {
-		strategy := &value.ValueFactor{}
+		strategy := &value.ValueFactor{IndexName: "SPX"}
 		acct := portfolio.New(
 			portfolio.WithCash(100000, startDate),
 			portfolio.WithAllMetrics(),

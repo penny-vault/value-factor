@@ -35,7 +35,7 @@ var description string
 // ValueFactor implements an earnings yield (EBIT/EV) value factor strategy.
 // It ranks stocks by EV/EBIT ratio and buys the cheapest stocks (lowest ratio).
 type ValueFactor struct {
-	IndexName   string `pvbt:"index" desc:"Stock index universe to select from" default:"SPX" suggest:"SPX=SPX|NDX=NDX"`
+	IndexName   string `pvbt:"index" desc:"Stock index universe to select from" default:"us-tradable" suggest:"SPX=SPX|NDX=NDX|us-tradable=us-tradable"`
 	TopHoldings int    `pvbt:"top-holdings" desc:"Number of cheapest stocks to hold" default:"50" suggest:"SPX=50|NDX=10"`
 }
 
