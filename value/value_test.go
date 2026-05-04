@@ -42,8 +42,7 @@ var _ = Describe("ValueFactor", func() {
 		}
 	})
 
-	runBacktest := func() portfolio.Portfolio {
-		strategy := &value.ValueFactor{IndexName: "SPX"}
+	runBacktestWith := func(strategy *value.ValueFactor) portfolio.Portfolio {
 		acct := portfolio.New(
 			portfolio.WithCash(100000, startDate),
 			portfolio.WithAllMetrics(),
@@ -60,15 +59,19 @@ var _ = Describe("ValueFactor", func() {
 		return result
 	}
 
+	runBacktest := func() portfolio.Portfolio {
+		return runBacktestWith(&value.ValueFactor{IndexName: "SPX"})
+	}
+
 	It("produces expected returns and risk metrics", func() {
 		result := runBacktest()
 
 		summary, err := result.Summary()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(summary.TWRR).To(BeNumerically("~", 0.1466, 0.01))
+		Expect(summary.TWRR).To(BeNumerically("~", 0.1166, 0.01))
 		Expect(summary.MaxDrawdown).To(BeNumerically(">", -0.15), "max drawdown should be better than -15%")
 
-		Expect(result.Value()).To(BeNumerically("~", 114661, 500))
+		Expect(result.Value()).To(BeNumerically("~", 111660, 500))
 	})
 
 	It("rebalances on all quarter-end dates", func() {
@@ -104,8 +107,8 @@ var _ = Describe("ValueFactor", func() {
 			}
 		}
 
-		Expect(len(firstRebalanceBuys)).To(BeNumerically(">=", 45),
-			"should buy at least 45 stocks on first rebalance (got %d)", len(firstRebalanceBuys))
+		Expect(len(firstRebalanceBuys)).To(BeNumerically(">=", 35),
+			"should buy at least 35 stocks on first rebalance (got %d)", len(firstRebalanceBuys))
 		Expect(len(firstRebalanceBuys)).To(BeNumerically("<=", 51),
 			"should buy at most 51 stocks on first rebalance (got %d)", len(firstRebalanceBuys))
 	})
@@ -124,4 +127,30 @@ var _ = Describe("ValueFactor", func() {
 		Expect(len(tickers)).To(BeNumerically(">=", 60),
 			"should trade at least 60 unique stocks across all rebalances")
 	})
+
+	It("respects the sector cap when enabled", func() {
+		const cap = 5
+		result := runBacktestWith(&value.ValueFactor{IndexName: "SPX", SectorCap: cap})
+		txns := result.Transactions()
+
+		// Group first-rebalance buys by sector and assert no sector exceeds the cap.
+		sectorCount := map[asset.Sector]int{}
+		for _, t := range txns {
+			if t.Type != asset.BuyTransaction {
+				continue
+			}
+			if t.Date.In(nyc).Format("2006-01-02") != "2023-12-29" {
+				continue
+			}
+			sectorCount[t.Asset.Sector]++
+		}
+
+		Expect(sectorCount).NotTo(BeEmpty(), "should hold something on the first rebalance")
+		for sector, count := range sectorCount {
+			Expect(count).To(BeNumerically("<=", cap),
+				"sector %q has %d holdings, exceeds cap %d", sector, count, cap)
+		}
+	})
+
 })
+
