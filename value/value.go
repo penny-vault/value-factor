@@ -55,7 +55,7 @@ func (s *ValueFactor) Describe() engine.StrategyDescription {
 		Version:     "1.1.0",
 		VersionDate: time.Date(2026, 5, 4, 0, 0, 0, 0, time.UTC),
 		Schedule:    "@quarterend",
-		Benchmark:   "VFINX",
+		Benchmark:   "SPY",
 	}
 }
 
